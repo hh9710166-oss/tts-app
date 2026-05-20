@@ -1,0 +1,581 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>قارئ النصوص</title>
+<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;800&family=Sora:wght@400;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0d0d14;
+    --surface: #16161f;
+    --surface2: #1e1e2e;
+    --accent: #7c6aff;
+    --accent2: #ff6a9b;
+    --accent3: #6affda;
+    --text: #e8e8f0;
+    --muted: #6b6b80;
+    --radius: 16px;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Cairo', sans-serif;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 24px 16px 40px;
+    position: relative;
+    overflow-x: hidden;
+  }
+
+  /* Background orbs */
+  body::before, body::after {
+    content: '';
+    position: fixed;
+    border-radius: 50%;
+    filter: blur(80px);
+    pointer-events: none;
+    z-index: 0;
+  }
+  body::before {
+    width: 300px; height: 300px;
+    background: radial-gradient(circle, #7c6aff33, transparent);
+    top: -80px; right: -80px;
+  }
+  body::after {
+    width: 250px; height: 250px;
+    background: radial-gradient(circle, #ff6a9b22, transparent);
+    bottom: 0; left: -60px;
+  }
+
+  .wrapper {
+    width: 100%;
+    max-width: 480px;
+    position: relative;
+    z-index: 1;
+  }
+
+  header {
+    text-align: center;
+    margin-bottom: 32px;
+  }
+
+  .logo {
+    font-size: 48px;
+    margin-bottom: 8px;
+    display: block;
+    animation: pulse 3s ease-in-out infinite;
+  }
+
+  @keyframes pulse {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.08); }
+  }
+
+  h1 {
+    font-size: 28px;
+    font-weight: 800;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .subtitle {
+    color: var(--muted);
+    font-size: 14px;
+    margin-top: 4px;
+  }
+
+  /* Lang toggle */
+  .lang-toggle {
+    display: flex;
+    background: var(--surface2);
+    border-radius: 50px;
+    padding: 4px;
+    margin-bottom: 20px;
+    gap: 4px;
+  }
+
+  .lang-btn {
+    flex: 1;
+    padding: 10px;
+    border: none;
+    border-radius: 50px;
+    cursor: pointer;
+    font-family: 'Cairo', sans-serif;
+    font-size: 14px;
+    font-weight: 600;
+    transition: all 0.3s ease;
+    background: transparent;
+    color: var(--muted);
+  }
+
+  .lang-btn.active {
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    color: white;
+    box-shadow: 0 4px 20px #7c6aff44;
+  }
+
+  /* Textarea */
+  .textarea-wrap {
+    position: relative;
+    margin-bottom: 20px;
+  }
+
+  textarea {
+    width: 100%;
+    min-height: 180px;
+    background: var(--surface);
+    border: 1.5px solid #ffffff11;
+    border-radius: var(--radius);
+    padding: 18px;
+    color: var(--text);
+    font-family: 'Cairo', sans-serif;
+    font-size: 16px;
+    line-height: 1.7;
+    resize: vertical;
+    outline: none;
+    transition: border-color 0.3s;
+    direction: auto;
+  }
+
+  textarea:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px #7c6aff22;
+  }
+
+  textarea::placeholder { color: var(--muted); }
+
+  .char-count {
+    position: absolute;
+    bottom: 12px;
+    left: 16px;
+    font-size: 12px;
+    color: var(--muted);
+  }
+
+  /* Voice selector */
+  .section-label {
+    font-size: 13px;
+    color: var(--muted);
+    font-weight: 600;
+    margin-bottom: 10px;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+  }
+
+  .voice-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    margin-bottom: 20px;
+  }
+
+  .voice-card {
+    background: var(--surface);
+    border: 1.5px solid #ffffff11;
+    border-radius: var(--radius);
+    padding: 14px;
+    cursor: pointer;
+    transition: all 0.25s;
+    text-align: center;
+  }
+
+  .voice-card:hover {
+    border-color: var(--accent);
+    transform: translateY(-2px);
+  }
+
+  .voice-card.selected {
+    border-color: var(--accent);
+    background: #7c6aff18;
+    box-shadow: 0 4px 20px #7c6aff22;
+  }
+
+  .voice-card .icon { font-size: 24px; margin-bottom: 6px; }
+  .voice-card .name { font-size: 13px; font-weight: 600; }
+  .voice-card .lang-tag {
+    font-size: 11px;
+    color: var(--muted);
+    margin-top: 2px;
+  }
+
+  /* Sliders */
+  .controls-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 14px;
+    margin-bottom: 24px;
+  }
+
+  .control-box {
+    background: var(--surface);
+    border-radius: var(--radius);
+    padding: 14px;
+  }
+
+  .control-box label {
+    font-size: 12px;
+    color: var(--muted);
+    font-weight: 600;
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 10px;
+  }
+
+  .control-box label span {
+    color: var(--accent);
+    font-weight: 700;
+  }
+
+  input[type=range] {
+    width: 100%;
+    -webkit-appearance: none;
+    height: 4px;
+    border-radius: 10px;
+    background: var(--surface2);
+    outline: none;
+  }
+
+  input[type=range]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 18px; height: 18px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    cursor: pointer;
+    box-shadow: 0 2px 8px #7c6aff55;
+  }
+
+  /* Buttons */
+  .btn-group {
+    display: flex;
+    gap: 12px;
+    margin-bottom: 20px;
+  }
+
+  .btn-play {
+    flex: 1;
+    padding: 18px;
+    border: none;
+    border-radius: var(--radius);
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    color: white;
+    font-family: 'Cairo', sans-serif;
+    font-size: 18px;
+    font-weight: 800;
+    cursor: pointer;
+    transition: all 0.3s;
+    box-shadow: 0 8px 30px #7c6aff44;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+  }
+
+  .btn-play:hover { transform: translateY(-2px); box-shadow: 0 12px 40px #7c6aff66; }
+  .btn-play:active { transform: scale(0.97); }
+  .btn-play:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+
+  .btn-stop {
+    padding: 18px 22px;
+    border: 1.5px solid #ff6a9b55;
+    border-radius: var(--radius);
+    background: transparent;
+    color: var(--accent2);
+    font-size: 22px;
+    cursor: pointer;
+    transition: all 0.3s;
+    border-radius: var(--radius);
+  }
+
+  .btn-stop:hover { background: #ff6a9b18; }
+
+  /* Wave animation */
+  .wave-bars {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    height: 28px;
+    margin-bottom: 16px;
+    opacity: 0;
+    transition: opacity 0.4s;
+  }
+
+  .wave-bars.active { opacity: 1; }
+
+  .bar {
+    width: 4px;
+    border-radius: 10px;
+    background: linear-gradient(to top, var(--accent), var(--accent2));
+    animation: wave 1s ease-in-out infinite;
+  }
+
+  .bar:nth-child(1) { height: 10px; animation-delay: 0s; }
+  .bar:nth-child(2) { height: 20px; animation-delay: 0.1s; }
+  .bar:nth-child(3) { height: 28px; animation-delay: 0.2s; }
+  .bar:nth-child(4) { height: 20px; animation-delay: 0.3s; }
+  .bar:nth-child(5) { height: 12px; animation-delay: 0.4s; }
+  .bar:nth-child(6) { height: 22px; animation-delay: 0.15s; }
+  .bar:nth-child(7) { height: 16px; animation-delay: 0.25s; }
+
+  @keyframes wave {
+    0%, 100% { transform: scaleY(0.4); }
+    50% { transform: scaleY(1); }
+  }
+
+  /* Status */
+  .status {
+    text-align: center;
+    font-size: 13px;
+    color: var(--muted);
+    min-height: 20px;
+  }
+
+  .status.speaking { color: var(--accent3); }
+  .status.error { color: var(--accent2); }
+
+  /* No support warning */
+  .no-support {
+    background: #ff6a9b18;
+    border: 1px solid #ff6a9b44;
+    border-radius: var(--radius);
+    padding: 16px;
+    text-align: center;
+    font-size: 14px;
+    color: var(--accent2);
+    display: none;
+  }
+</style>
+</head>
+<body>
+<div class="wrapper">
+
+  <header>
+    <span class="logo">🎙️</span>
+    <h1>قارئ النصوص</h1>
+    <p class="subtitle">اكتب أي كلام وهو يقراه ليك</p>
+  </header>
+
+  <div class="no-support" id="noSupport">
+    ⚠️ المتصفح ده مش بيدعم الميزة دي. استخدم Chrome على Android.
+  </div>
+
+  <!-- Language Toggle -->
+  <div class="lang-toggle">
+    <button class="lang-btn active" onclick="setLang('ar')">🇸🇦 عربي</button>
+    <button class="lang-btn" onclick="setLang('en')">🇺🇸 English</button>
+    <button class="lang-btn" onclick="setLang('both')">الاتنين</button>
+  </div>
+
+  <!-- Text Input -->
+  <div class="textarea-wrap">
+    <textarea id="textInput" placeholder="اكتب هنا الكلام اللي عايزه يتقرأ..." oninput="updateCount()"></textarea>
+    <span class="char-count" id="charCount">0 حرف</span>
+  </div>
+
+  <!-- Voice Selection -->
+  <div class="section-label">اختار الصوت</div>
+  <div class="voice-grid" id="voiceGrid">
+    <div class="voice-card selected" onclick="selectVoice(this, 0)">
+      <div class="icon">👨</div>
+      <div class="name">صوت 1</div>
+      <div class="lang-tag" id="tag0">جاري التحميل...</div>
+    </div>
+    <div class="voice-card" onclick="selectVoice(this, 1)">
+      <div class="icon">👩</div>
+      <div class="name">صوت 2</div>
+      <div class="lang-tag" id="tag1">جاري التحميل...</div>
+    </div>
+    <div class="voice-card" onclick="selectVoice(this, 2)">
+      <div class="icon">🧑</div>
+      <div class="name">صوت 3</div>
+      <div class="lang-tag" id="tag2">جاري التحميل...</div>
+    </div>
+    <div class="voice-card" onclick="selectVoice(this, 3)">
+      <div class="icon">🧓</div>
+      <div class="name">صوت 4</div>
+      <div class="lang-tag" id="tag3">جاري التحميل...</div>
+    </div>
+  </div>
+
+  <!-- Controls -->
+  <div class="controls-grid">
+    <div class="control-box">
+      <label>السرعة <span id="rateVal">1.0</span></label>
+      <input type="range" id="rate" min="0.5" max="2" step="0.1" value="1"
+             oninput="document.getElementById('rateVal').textContent = parseFloat(this.value).toFixed(1)">
+    </div>
+    <div class="control-box">
+      <label>الحدة <span id="pitchVal">1.0</span></label>
+      <input type="range" id="pitch" min="0.5" max="2" step="0.1" value="1"
+             oninput="document.getElementById('pitchVal').textContent = parseFloat(this.value).toFixed(1)">
+    </div>
+  </div>
+
+  <!-- Wave animation -->
+  <div class="wave-bars" id="waveBars">
+    <div class="bar"></div><div class="bar"></div><div class="bar"></div>
+    <div class="bar"></div><div class="bar"></div><div class="bar"></div>
+    <div class="bar"></div>
+  </div>
+
+  <!-- Buttons -->
+  <div class="btn-group">
+    <button class="btn-play" id="playBtn" onclick="speak()">
+      <span id="playIcon">▶</span>
+      <span id="playText">اقرأ</span>
+    </button>
+    <button class="btn-stop" onclick="stopSpeech()" title="وقف">⏹</button>
+  </div>
+
+  <div class="status" id="status">اختار نص واضغط اقرأ</div>
+
+</div>
+
+<script>
+  const synth = window.speechSynthesis;
+  let voices = [];
+  let filteredVoices = [];
+  let selectedVoiceIndex = 0;
+  let currentLang = 'ar';
+  let isSpeaking = false;
+
+  if (!synth) {
+    document.getElementById('noSupport').style.display = 'block';
+  }
+
+  function loadVoices() {
+    voices = synth.getVoices();
+    filterVoices();
+  }
+
+  function filterVoices() {
+    if (currentLang === 'ar') {
+      filteredVoices = voices.filter(v => v.lang.startsWith('ar'));
+      if (!filteredVoices.length) filteredVoices = voices.filter(v => v.lang.includes('ar'));
+    } else if (currentLang === 'en') {
+      filteredVoices = voices.filter(v => v.lang.startsWith('en'));
+    } else {
+      const ar = voices.filter(v => v.lang.startsWith('ar'));
+      const en = voices.filter(v => v.lang.startsWith('en'));
+      filteredVoices = [...ar.slice(0,2), ...en.slice(0,2)];
+    }
+    if (!filteredVoices.length) filteredVoices = voices.slice(0, 4);
+
+    const icons = ['👨','👩','🧑','🧓'];
+    const labels = ['صوت 1','صوت 2','صوت 3','صوت 4'];
+    for (let i = 0; i < 4; i++) {
+      const v = filteredVoices[i];
+      const tag = document.getElementById('tag' + i);
+      const card = document.querySelectorAll('.voice-card')[i];
+      if (v) {
+        tag.textContent = v.lang + ' • ' + (v.name.length > 14 ? v.name.slice(0,14)+'…' : v.name);
+        card.style.opacity = '1';
+        card.style.pointerEvents = 'auto';
+      } else {
+        tag.textContent = 'غير متاح';
+        card.style.opacity = '0.4';
+        card.style.pointerEvents = 'none';
+      }
+    }
+    selectedVoiceIndex = 0;
+    document.querySelectorAll('.voice-card').forEach((c,i) => {
+      c.classList.toggle('selected', i === 0);
+    });
+  }
+
+  synth.onvoiceschanged = loadVoices;
+  loadVoices();
+  setTimeout(loadVoices, 500);
+
+  function setLang(lang) {
+    currentLang = lang;
+    document.querySelectorAll('.lang-btn').forEach((b,i) => {
+      b.classList.toggle('active', ['ar','en','both'][i] === lang);
+    });
+    // Update textarea direction
+    const ta = document.getElementById('textInput');
+    if (lang === 'en') { ta.dir = 'ltr'; ta.style.textAlign = 'left'; }
+    else { ta.dir = 'auto'; ta.style.textAlign = 'right'; }
+    filterVoices();
+  }
+
+  function selectVoice(el, i) {
+    document.querySelectorAll('.voice-card').forEach(c => c.classList.remove('selected'));
+    el.classList.add('selected');
+    selectedVoiceIndex = i;
+  }
+
+  function updateCount() {
+    const len = document.getElementById('textInput').value.length;
+    document.getElementById('charCount').textContent = len + ' حرف';
+  }
+
+  function setStatus(msg, cls) {
+    const el = document.getElementById('status');
+    el.textContent = msg;
+    el.className = 'status ' + (cls || '');
+  }
+
+  function speak() {
+    const text = document.getElementById('textInput').value.trim();
+    if (!text) { setStatus('⚠️ اكتب نص الأول!', 'error'); return; }
+    if (!synth) { setStatus('المتصفح مش بيدعم الميزة دي', 'error'); return; }
+
+    synth.cancel();
+
+    const utter = new SpeechSynthesisUtterance(text);
+    const voice = filteredVoices[selectedVoiceIndex];
+    if (voice) utter.voice = voice;
+    utter.rate = parseFloat(document.getElementById('rate').value);
+    utter.pitch = parseFloat(document.getElementById('pitch').value);
+
+    utter.onstart = () => {
+      isSpeaking = true;
+      document.getElementById('waveBars').classList.add('active');
+      document.getElementById('playBtn').disabled = true;
+      document.getElementById('playIcon').textContent = '🔊';
+      document.getElementById('playText').textContent = 'بيقرأ...';
+      setStatus('🎙️ جاري القراءة...', 'speaking');
+    };
+
+    utter.onend = () => {
+      isSpeaking = false;
+      document.getElementById('waveBars').classList.remove('active');
+      document.getElementById('playBtn').disabled = false;
+      document.getElementById('playIcon').textContent = '▶';
+      document.getElementById('playText').textContent = 'اقرأ';
+      setStatus('✅ خلص!');
+    };
+
+    utter.onerror = (e) => {
+      isSpeaking = false;
+      document.getElementById('waveBars').classList.remove('active');
+      document.getElementById('playBtn').disabled = false;
+      document.getElementById('playIcon').textContent = '▶';
+      document.getElementById('playText').textContent = 'اقرأ';
+      setStatus('❌ حصل خطأ: ' + e.error, 'error');
+    };
+
+    synth.speak(utter);
+  }
+
+  function stopSpeech() {
+    synth.cancel();
+    isSpeaking = false;
+    document.getElementById('waveBars').classList.remove('active');
+    document.getElementById('playBtn').disabled = false;
+    document.getElementById('playIcon').textContent = '▶';
+    document.getElementById('playText').textContent = 'اقرأ';
+    setStatus('⏹ وقف');
+  }
+</script>
+</body>
+</html>
